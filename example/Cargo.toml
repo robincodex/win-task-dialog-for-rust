@@ -1,0 +1,11 @@
+[package]
+name = "example"
+version = "0.1.0"
+authors = ["RobinCode <xv.robincode@gmail.com>"]
+edition = "2018"
+
+[dependencies]
+win-task-dialog-for-rust = {path = "../"}
+
+[build-dependencies]
+embed-resource = "1.6"

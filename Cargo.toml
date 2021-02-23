@@ -1,0 +1,10 @@
+[package]
+name = "win-task-dialog-for-rust"
+version = "0.1.0"
+authors = ["RobinCode <xv.robincode@gmail.com>"]
+edition = "2018"
+
+[dependencies]
+
+[target.'cfg(windows)'.dependencies]
+winapi = { version = "0.3", features = ["commoncontrols","commctrl","libloaderapi"] }
