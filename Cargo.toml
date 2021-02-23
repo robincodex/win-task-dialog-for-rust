@@ -1,5 +1,5 @@
 [package]
-name = "win-task-dialog-for-rust"
+name = "win-task-dialog"
 version = "0.1.0"
 authors = ["RobinCode <xv.robincode@gmail.com>"]
 edition = "2018"

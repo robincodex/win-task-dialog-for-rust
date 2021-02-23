@@ -1,6 +1,6 @@
 # Windows Task Dialog For Rust
 
-Simply call the Win32 API `TaskDialogIndirect`.
+Simply call the Win32 API `TaskDialogIndirect` in Rust.
 
 # Dependencies
 
@@ -17,9 +17,9 @@ embed-resource = "1.6"
 # Example
 
 ```rust
-extern crate win_task_dialog_for_rust;
+extern crate win_task_dialog;
 
-use win_task_dialog_for_rust::*;
+use win_task_dialog::*;
 
 fn main() {
     let conf = TaskDialogConfig {
