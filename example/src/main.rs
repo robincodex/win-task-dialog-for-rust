@@ -41,4 +41,7 @@ fn main() {
         "{} {} {}",
         result.button_id, result.radio_button_id, result.checked,
     );
+
+    show_msg_dialog("Title", "Hi", "Info", TD_INFORMATION_ICON);
+    show_msg_dialog("Title", "!!!", "Error", TD_ERROR_ICON);
 }

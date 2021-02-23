@@ -2,7 +2,6 @@
 name = "win-task-dialog"
 description = "Simply call the Win32 API TaskDialogIndirect in Rust."
 license = "MIT"
-license_file = "LICENSE"
 version = "0.1.1"
 authors = ["RobinCode <xv.robincode@gmail.com>"]
 edition = "2018"

@@ -83,14 +83,20 @@ pub struct TaskDialogResult {
     pub checked: bool,
 }
 
-/** Create dialog */
+impl Default for TaskDialogResult {
+    fn default() -> Self {
+        TaskDialogResult {
+            button_id: 0,
+            radio_button_id: 0,
+            checked: false,
+        }
+    }
+}
+
+/** Show task dialog */
 #[cfg(windows)]
 pub fn show_task_dialog(conf: &TaskDialogConfig) -> Result<TaskDialogResult, Error> {
-    let mut result = TaskDialogResult {
-        button_id: 0,
-        radio_button_id: 0,
-        checked: false,
-    };
+    let mut result = TaskDialogResult::default();
     let ret = unsafe {
         use std::ffi::OsStr;
         use std::os::windows::ffi::OsStrExt;
@@ -197,7 +203,26 @@ pub fn show_task_dialog(conf: &TaskDialogConfig) -> Result<TaskDialogResult, Err
     }
 }
 
+/** Show message dialog, the dialog have only the OK button */
+#[cfg(windows)]
+pub fn show_msg_dialog(
+    title: &str,
+    main_instruction: &str,
+    content: &str,
+    icon: LPWSTR,
+) -> Option<Error> {
+    let conf = TaskDialogConfig {
+        common_buttons: TDCBF_OK_BUTTON,
+        window_title: title.to_string(),
+        main_instruction: main_instruction.to_string(),
+        content: content.to_string(),
+        main_icon: icon,
+        ..Default::default()
+    };
+    show_task_dialog(&conf).err()
+}
+
 #[cfg(not(windows))]
 pub fn show_task_dialog(conf: &DialogConfig) -> Result<TaskDialogResult, Error> {
-    Err("Only support on Windows")
+    TaskDialogResult::default()
 }
