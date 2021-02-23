@@ -6,7 +6,7 @@ Simply call the Win32 API `TaskDialogIndirect` in Rust.
 
 ```toml
 [dependencies]
-win-task-dialog-for-rust = "0.1.0"
+win-task-dialog = "0.1.0"
 
 [build-dependencies]
 embed-resource = "1.6"
