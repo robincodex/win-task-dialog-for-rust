@@ -47,6 +47,31 @@ pub struct TaskDialogConfig {
     pub footer_icon: LPWSTR,
 }
 
+impl Default for TaskDialogConfig {
+    fn default() -> Self {
+        TaskDialogConfig {
+            parent: null_mut(),
+            instance: null_mut(),
+            flags: 0,
+            common_buttons: TDCBF_CANCEL_BUTTON,
+            window_title: "".to_string(),
+            main_instruction: "".to_string(),
+            content: "".to_string(),
+            verification_text: "".to_string(),
+            expanded_information: "".to_string(),
+            expanded_control_text: "".to_string(),
+            collapsed_control_text: "".to_string(),
+            footer: "".to_string(),
+            buttons: vec![],
+            default_button: 0,
+            radio_buttons: vec![],
+            default_radio_buttons: 0,
+            main_icon: null_mut(),
+            footer_icon: null_mut(),
+        }
+    }
+}
+
 pub struct TaskDialogButton {
     pub id: c_int,
     pub text: String,
@@ -173,6 +198,6 @@ pub fn show_task_dialog(conf: &TaskDialogConfig) -> Result<TaskDialogResult, Err
 }
 
 #[cfg(not(windows))]
-pub fn ShowTaskDialog(conf: &DialogConfig) -> Result<TaskDialogResult, Error> {
+pub fn show_task_dialog(conf: &DialogConfig) -> Result<TaskDialogResult, Error> {
     Err("Only support on Windows")
 }
