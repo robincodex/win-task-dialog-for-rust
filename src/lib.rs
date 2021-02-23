@@ -9,10 +9,11 @@ use winapi::ctypes::*;
 use winapi::shared::minwindef::*;
 use winapi::shared::windef::HWND;
 use winapi::um::commctrl::{
-    TaskDialogIndirect, TASKDIALOGCONFIG, TASKDIALOG_BUTTON, TASKDIALOG_COMMON_BUTTON_FLAGS,
-    TASKDIALOG_FLAGS,
+    TASKDIALOGCONFIG_u1, TASKDIALOGCONFIG_u2, TaskDialogIndirect, TASKDIALOGCONFIG,
+    TASKDIALOG_BUTTON, TASKDIALOG_COMMON_BUTTON_FLAGS, TASKDIALOG_FLAGS,
 };
 use winapi::um::libloaderapi::GetModuleHandleA;
+use winapi::um::winnt::LPWSTR;
 
 pub use winapi::um::commctrl::{
     TDCBF_CANCEL_BUTTON, TDCBF_CLOSE_BUTTON, TDCBF_NO_BUTTON, TDCBF_OK_BUTTON, TDCBF_RETRY_BUTTON,
@@ -21,7 +22,8 @@ pub use winapi::um::commctrl::{
     TDF_NO_DEFAULT_RADIO_BUTTON, TDF_NO_SET_FOREGROUND, TDF_POSITION_RELATIVE_TO_WINDOW,
     TDF_RTL_LAYOUT, TDF_SHOW_MARQUEE_PROGRESS_BAR, TDF_SHOW_PROGRESS_BAR, TDF_SIZE_TO_CONTENT,
     TDF_USE_COMMAND_LINKS, TDF_USE_COMMAND_LINKS_NO_ICON, TDF_USE_HICON_FOOTER, TDF_USE_HICON_MAIN,
-    TDF_VERIFICATION_FLAG_CHECKED,
+    TDF_VERIFICATION_FLAG_CHECKED, TD_ERROR_ICON, TD_INFORMATION_ICON, TD_SHIELD_ICON,
+    TD_WARNING_ICON,
 };
 
 pub struct TaskDialogConfig {
@@ -41,6 +43,8 @@ pub struct TaskDialogConfig {
     pub default_button: c_int,
     pub radio_buttons: Vec<TaskDialogButton>,
     pub default_radio_buttons: c_int,
+    pub main_icon: LPWSTR,
+    pub footer_icon: LPWSTR,
 }
 
 pub struct TaskDialogButton {
@@ -113,6 +117,16 @@ pub fn show_task_dialog(conf: &TaskDialogConfig) -> Result<TaskDialogResult, Err
             });
         }
 
+        // ICON
+        let mut u1: TASKDIALOGCONFIG_u1 = Default::default();
+        let mut u2: TASKDIALOGCONFIG_u2 = Default::default();
+        if conf.main_icon != null_mut() {
+            core::ptr::write(u1.pszMainIcon_mut(), conf.main_icon as *const u16);
+        }
+        if conf.footer_icon != null_mut() {
+            core::ptr::write(u2.pszFooterIcon_mut(), conf.footer_icon as *const u16);
+        }
+
         let config = TASKDIALOGCONFIG {
             cbSize: mem::size_of::<TASKDIALOGCONFIG>() as UINT,
             hwndParent: conf.parent,
@@ -133,20 +147,21 @@ pub fn show_task_dialog(conf: &TaskDialogConfig) -> Result<TaskDialogResult, Err
             cRadioButtons: radio_buttons.len() as UINT,
             pRadioButtons: radio_buttons.as_slice().as_ptr(),
             nDefaultRadioButton: conf.default_radio_buttons,
-            u1: std::mem::zeroed(),
-            u2: std::mem::zeroed(),
+            u1,
+            u2,
             pfCallback: None,
             lpCallbackData: 0,
             cxWidth: 0,
         };
 
         // Result
-        let mut btn1: c_int = 0;
-        let mut btn2: c_int = 0;
         let mut verify: BOOL = FALSE;
-        let dialog_result = TaskDialogIndirect(&config, &mut btn1, &mut btn2, &mut verify);
-        result.button_id = btn1;
-        result.radio_button_id = btn2;
+        let dialog_result = TaskDialogIndirect(
+            &config,
+            &mut result.button_id,
+            &mut result.radio_button_id,
+            &mut verify,
+        );
         result.checked = verify != 0;
         dialog_result
     };

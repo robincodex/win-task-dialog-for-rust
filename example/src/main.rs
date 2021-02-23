@@ -8,14 +8,14 @@ fn main() {
         instance: std::ptr::null_mut(),
         flags: TDF_USE_COMMAND_LINKS,
         common_buttons: TDCBF_OK_BUTTON | TDCBF_CANCEL_BUTTON,
-        window_title: "WindowTitle标题".to_string(),
-        main_instruction: "MainInstruction主要".to_string(),
-        content: "内容".to_string(),
+        window_title: "Title 标题".to_string(),
+        main_instruction: "Привет".to_string(),
+        content: "こんにちは".to_string(),
         verification_text: "VerificationText".to_string(),
         expanded_information: "".to_string(),
         expanded_control_text: "".to_string(),
         collapsed_control_text: "".to_string(),
-        footer: "".to_string(),
+        footer: "footer".to_string(),
         buttons: vec![
             TaskDialogButton {
                 id: 10,
@@ -23,16 +23,23 @@ fn main() {
             },
             TaskDialogButton {
                 id: 11,
-                text: "Two".to_string(),
-            },
-            TaskDialogButton {
-                id: 13,
-                text: "可以".to_string(),
+                text: "贰".to_string(),
             },
         ],
         default_button: 11,
-        radio_buttons: vec![],
+        radio_buttons: vec![
+            TaskDialogButton {
+                id: 10,
+                text: "Option 1".to_string(),
+            },
+            TaskDialogButton {
+                id: 11,
+                text: "Option 2".to_string(),
+            },
+        ],
         default_radio_buttons: 0,
+        main_icon: TD_SHIELD_ICON,
+        footer_icon: TD_INFORMATION_ICON,
     };
     let result = show_task_dialog(&conf).unwrap();
     println!(
