@@ -1,31 +1,28 @@
 #[cfg(windows)]
 extern crate winapi;
 
-use std::io::Error;
-use std::iter::once;
-use std::mem;
-use std::ptr::null_mut;
-use winapi::ctypes::*;
+#[cfg(windows)]
 use winapi::shared::minwindef::*;
+#[cfg(windows)]
 use winapi::shared::windef::HWND;
+#[cfg(windows)]
 use winapi::um::commctrl::{
     TASKDIALOGCONFIG_u1, TASKDIALOGCONFIG_u2, TaskDialogIndirect, TASKDIALOGCONFIG,
     TASKDIALOG_BUTTON, TASKDIALOG_COMMON_BUTTON_FLAGS, TASKDIALOG_FLAGS,
 };
+#[cfg(windows)]
 use winapi::um::libloaderapi::GetModuleHandleA;
+#[cfg(windows)]
 use winapi::um::winnt::LPWSTR;
 
-pub use winapi::um::commctrl::{
-    TDCBF_CANCEL_BUTTON, TDCBF_CLOSE_BUTTON, TDCBF_NO_BUTTON, TDCBF_OK_BUTTON, TDCBF_RETRY_BUTTON,
-    TDCBF_YES_BUTTON, TDF_ALLOW_DIALOG_CANCELLATION, TDF_CALLBACK_TIMER, TDF_CAN_BE_MINIMIZED,
-    TDF_ENABLE_HYPERLINKS, TDF_EXPANDED_BY_DEFAULT, TDF_EXPAND_FOOTER_AREA,
-    TDF_NO_DEFAULT_RADIO_BUTTON, TDF_NO_SET_FOREGROUND, TDF_POSITION_RELATIVE_TO_WINDOW,
-    TDF_RTL_LAYOUT, TDF_SHOW_MARQUEE_PROGRESS_BAR, TDF_SHOW_PROGRESS_BAR, TDF_SIZE_TO_CONTENT,
-    TDF_USE_COMMAND_LINKS, TDF_USE_COMMAND_LINKS_NO_ICON, TDF_USE_HICON_FOOTER, TDF_USE_HICON_MAIN,
-    TDF_VERIFICATION_FLAG_CHECKED, TD_ERROR_ICON, TD_INFORMATION_ICON, TD_SHIELD_ICON,
-    TD_WARNING_ICON,
-};
+use std::io::Error;
+use std::ptr::null_mut;
 
+mod constants;
+pub use constants::*;
+
+/** TaskDialogConfig on Windows */
+#[cfg(windows)]
 pub struct TaskDialogConfig {
     pub parent: HWND,
     pub instance: HMODULE,
@@ -40,11 +37,33 @@ pub struct TaskDialogConfig {
     pub collapsed_control_text: String,
     pub footer: String,
     pub buttons: Vec<TaskDialogButton>,
-    pub default_button: c_int,
+    pub default_button: i32,
     pub radio_buttons: Vec<TaskDialogButton>,
-    pub default_radio_buttons: c_int,
+    pub default_radio_buttons: i32,
     pub main_icon: LPWSTR,
     pub footer_icon: LPWSTR,
+}
+/** TaskDialogConfig not on Windows */
+#[cfg(not(windows))]
+pub struct TaskDialogConfig {
+    pub parent: *mut usize,
+    pub instance: *mut usize,
+    pub flags: u32,
+    pub common_buttons: u32,
+    pub window_title: String,
+    pub main_instruction: String,
+    pub content: String,
+    pub verification_text: String,
+    pub expanded_information: String,
+    pub expanded_control_text: String,
+    pub collapsed_control_text: String,
+    pub footer: String,
+    pub buttons: Vec<TaskDialogButton>,
+    pub default_button: i32,
+    pub radio_buttons: Vec<TaskDialogButton>,
+    pub default_radio_buttons: i32,
+    pub main_icon: *mut u16,
+    pub footer_icon: *mut u16,
 }
 
 impl Default for TaskDialogConfig {
@@ -73,7 +92,7 @@ impl Default for TaskDialogConfig {
 }
 
 pub struct TaskDialogButton {
-    pub id: c_int,
+    pub id: i32,
     pub text: String,
 }
 
@@ -97,14 +116,17 @@ impl Default for TaskDialogResult {
 #[cfg(windows)]
 pub fn show_task_dialog(conf: &TaskDialogConfig) -> Result<TaskDialogResult, Error> {
     let mut result = TaskDialogResult::default();
-    let ret = unsafe {
-        use std::ffi::OsStr;
-        use std::os::windows::ffi::OsStrExt;
-        /** Convert string to wide string */
-        fn to_os_string(text: &String) -> Vec<u16> {
-            OsStr::new(text).encode_wide().chain(once(0)).collect()
-        }
 
+    use std::iter::once;
+    use std::mem;
+    use std::ffi::OsStr;
+    use std::os::windows::ffi::OsStrExt;
+    /** Convert string to wide string */
+    fn to_os_string(text: &String) -> Vec<u16> {
+        OsStr::new(text).encode_wide().chain(once(0)).collect()
+    }
+
+    let ret = unsafe {
         // Call GetModuleHandleA on conf.instance is null
         let instance = if conf.instance == null_mut() {
             GetModuleHandleA(std::ptr::null())
@@ -223,6 +245,16 @@ pub fn show_msg_dialog(
 }
 
 #[cfg(not(windows))]
-pub fn show_task_dialog(conf: &DialogConfig) -> Result<TaskDialogResult, Error> {
-    TaskDialogResult::default()
+pub fn show_task_dialog(_conf: &TaskDialogConfig) -> Result<TaskDialogResult, Error> {
+    Ok(TaskDialogResult::default())
+}
+
+#[cfg(not(windows))]
+pub fn show_msg_dialog(
+    _title: &str,
+    _main_instruction: &str,
+    _content: &str,
+    _icon: *mut u16,
+) -> Option<Error> {
+    None
 }
