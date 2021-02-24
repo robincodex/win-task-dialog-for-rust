@@ -1,6 +1,10 @@
 # Windows Task Dialog For Rust
 
+[![Crates.io](https://img.shields.io/crates/v/win-task-dialog)](https://crates.io/crates/win-task-dialog)
+
 Simply call the Win32 API `TaskDialogIndirect` in Rust.
+
+Can be safely call on not windows platforms, but it has no effect.
 
 # Dependencies
 
