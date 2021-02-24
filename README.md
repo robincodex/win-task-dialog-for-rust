@@ -6,7 +6,7 @@ Simply call the Win32 API `TaskDialogIndirect` in Rust.
 
 ```toml
 [dependencies]
-win-task-dialog = "0.1.0"
+win-task-dialog = "0.1.2"
 
 [build-dependencies]
 embed-resource = "1.6"
@@ -23,17 +23,12 @@ use win_task_dialog::*;
 
 fn main() {
     let conf = TaskDialogConfig {
-        parent: std::ptr::null_mut(),
-        instance: std::ptr::null_mut(),
         flags: TDF_USE_COMMAND_LINKS,
         common_buttons: TDCBF_OK_BUTTON | TDCBF_CANCEL_BUTTON,
         window_title: "Title 标题".to_string(),
         main_instruction: "Привет".to_string(),
         content: "こんにちは".to_string(),
         verification_text: "VerificationText".to_string(),
-        expanded_information: "".to_string(),
-        expanded_control_text: "".to_string(),
-        collapsed_control_text: "".to_string(),
         footer: "footer".to_string(),
         buttons: vec![
             TaskDialogButton {
@@ -56,17 +51,19 @@ fn main() {
                 text: "Option 2".to_string(),
             },
         ],
-        default_radio_buttons: 0,
         main_icon: TD_SHIELD_ICON,
         footer_icon: TD_INFORMATION_ICON,
+        ..Default::default()
     };
     let result = show_task_dialog(&conf).unwrap();
     println!(
         "{} {} {}",
         result.button_id, result.radio_button_id, result.checked,
-    )
-}
+    );
 
+    show_msg_dialog("Title", "Hi", "Info", TD_INFORMATION_ICON);
+    show_msg_dialog("Title", "!!!", "Error", TD_ERROR_ICON);
+}
 ```
 
 # Example Screenshot
