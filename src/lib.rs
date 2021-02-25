@@ -2,18 +2,27 @@
 extern crate winapi;
 
 #[cfg(windows)]
+use winapi::shared::basetsd::LONG_PTR;
+#[cfg(windows)]
 use winapi::shared::minwindef::*;
 #[cfg(windows)]
 use winapi::shared::windef::HWND;
 #[cfg(windows)]
 use winapi::um::commctrl::{
-    TASKDIALOGCONFIG_u1, TASKDIALOGCONFIG_u2, TaskDialogIndirect, TASKDIALOGCONFIG,
+    TASKDIALOGCONFIG_u1, TASKDIALOGCONFIG_u2, TaskDialogIndirect, HRESULT, TASKDIALOGCONFIG,
     TASKDIALOG_BUTTON, TASKDIALOG_COMMON_BUTTON_FLAGS, TASKDIALOG_FLAGS,
+};
+#[cfg(windows)]
+pub use winapi::um::commctrl::{
+    TDF_SHOW_MARQUEE_PROGRESS_BAR, TDF_SHOW_PROGRESS_BAR, TDM_SET_PROGRESS_BAR_MARQUEE,
+    TDM_SET_PROGRESS_BAR_POS, TDN_CREATED, TDN_DESTROYED,
 };
 #[cfg(windows)]
 use winapi::um::libloaderapi::GetModuleHandleA;
 #[cfg(windows)]
 use winapi::um::winnt::LPWSTR;
+#[cfg(windows)]
+use winapi::um::winuser::SendMessageA;
 
 #[cfg(not(windows))]
 type HWND = *mut usize;
@@ -32,12 +41,11 @@ type TASKDIALOG_FLAGS = u32;
 #[allow(non_camel_case_types)]
 type TASKDIALOG_COMMON_BUTTON_FLAGS = u32;
 
-use std::io::Error;
 use std::ptr::null_mut;
+use std::{io::Error, usize};
 
 mod constants;
 pub use constants::*;
-
 pub struct TaskDialogConfig {
     pub parent: HWND,
     pub instance: HMODULE,
@@ -57,6 +65,10 @@ pub struct TaskDialogConfig {
     pub default_radio_buttons: i32,
     pub main_icon: LPWSTR,
     pub footer_icon: LPWSTR,
+    /** When created dialog, the value set to HWND. */
+    pub dialog_hwnd: HWND,
+    /** When close the dialog, the value set to true, default is false. */
+    pub is_destroyed: bool,
 }
 
 impl Default for TaskDialogConfig {
@@ -80,8 +92,66 @@ impl Default for TaskDialogConfig {
             default_radio_buttons: 0,
             main_icon: null_mut(),
             footer_icon: null_mut(),
+            dialog_hwnd: null_mut(),
+            is_destroyed: false,
         }
     }
+}
+
+#[cfg(windows)]
+impl TaskDialogConfig {
+    /**
+    Add TDF_SHOW_PROGRESS_BAR flag on marquee is false,
+    Add TDF_SHOW_MARQUEE_PROGRESS_BAR flag on marquee is true,
+    https://docs.microsoft.com/en-us/windows/win32/controls/progress-bar-control
+    */
+    pub fn enable_process_bar(&mut self, marquee: bool) {
+        if marquee {
+            if self.flags & TDF_SHOW_MARQUEE_PROGRESS_BAR != TDF_SHOW_MARQUEE_PROGRESS_BAR {
+                self.flags = self.flags | TDF_SHOW_MARQUEE_PROGRESS_BAR;
+            }
+        } else {
+            if self.flags & TDF_SHOW_PROGRESS_BAR != TDF_SHOW_PROGRESS_BAR {
+                self.flags = self.flags | TDF_SHOW_PROGRESS_BAR;
+            }
+        }
+    }
+
+    /** Set status or animation time of marquee progress bar */
+    pub fn set_process_bar_marquee(&mut self, enable: bool, time: isize) {
+        if self.dialog_hwnd == null_mut() {
+            return;
+        }
+        unsafe {
+            SendMessageA(
+                self.dialog_hwnd,
+                TDM_SET_PROGRESS_BAR_MARQUEE,
+                if enable {
+                    TRUE as usize
+                } else {
+                    FALSE as usize
+                },
+                time,
+            );
+        }
+    }
+
+    /** Set the percentage of the progress bar */
+    pub fn set_process_bar(&mut self, percentage: usize) {
+        if self.dialog_hwnd == null_mut() {
+            return;
+        }
+        unsafe {
+            SendMessageA(self.dialog_hwnd, TDM_SET_PROGRESS_BAR_POS, percentage, 0);
+        }
+    }
+}
+
+#[cfg(not(windows))]
+impl TaskDialogConfig {
+    pub fn enable_process_bar(&mut self, _marquee: bool) {}
+    pub fn set_process_bar_marquee(&mut self, _enable: bool, _time: isize) {}
+    pub fn set_process_bar(&mut self, _percentage: usize) {}
 }
 
 pub struct TaskDialogButton {
@@ -107,8 +177,10 @@ impl Default for TaskDialogResult {
 
 /** Show task dialog */
 #[cfg(windows)]
-pub fn show_task_dialog(conf: &TaskDialogConfig) -> Result<TaskDialogResult, Error> {
+pub fn show_task_dialog(conf: &mut TaskDialogConfig) -> Result<TaskDialogResult, Error> {
     let mut result = TaskDialogResult::default();
+    let conf_ptr: *mut TaskDialogConfig = conf;
+    let conf_long_ptr = conf_ptr as isize;
 
     use std::ffi::OsStr;
     use std::iter::once;
@@ -173,6 +245,27 @@ pub fn show_task_dialog(conf: &TaskDialogConfig) -> Result<TaskDialogResult, Err
             core::ptr::write(u2.pszFooterIcon_mut(), conf.footer_icon as *const u16);
         }
 
+        extern "system" fn callback(
+            hwnd: HWND,
+            msg: UINT,
+            _w_param: WPARAM,
+            _l_param: LPARAM,
+            lp_ref_data: LONG_PTR,
+        ) -> HRESULT {
+            if msg == TDN_CREATED {
+                unsafe {
+                    let conf = std::mem::transmute::<isize, *mut TaskDialogConfig>(lp_ref_data);
+                    (*conf).dialog_hwnd = hwnd;
+                }
+            } else if msg == TDN_DESTROYED {
+                unsafe {
+                    let conf = std::mem::transmute::<isize, *mut TaskDialogConfig>(lp_ref_data);
+                    (*conf).is_destroyed = true;
+                }
+            }
+            0
+        }
+
         let config = TASKDIALOGCONFIG {
             cbSize: mem::size_of::<TASKDIALOGCONFIG>() as UINT,
             hwndParent: conf.parent,
@@ -195,8 +288,8 @@ pub fn show_task_dialog(conf: &TaskDialogConfig) -> Result<TaskDialogResult, Err
             nDefaultRadioButton: conf.default_radio_buttons,
             u1,
             u2,
-            pfCallback: None,
-            lpCallbackData: 0,
+            pfCallback: Some(callback),
+            lpCallbackData: conf_long_ptr,
             cxWidth: 0,
         };
 
@@ -226,7 +319,7 @@ pub fn show_msg_dialog(
     content: &str,
     icon: LPWSTR,
 ) -> Option<Error> {
-    let conf = TaskDialogConfig {
+    let mut conf = TaskDialogConfig {
         common_buttons: TDCBF_OK_BUTTON,
         window_title: title.to_string(),
         main_instruction: main_instruction.to_string(),
@@ -234,7 +327,7 @@ pub fn show_msg_dialog(
         main_icon: icon,
         ..Default::default()
     };
-    show_task_dialog(&conf).err()
+    show_task_dialog(&mut conf).err()
 }
 
 #[cfg(not(windows))]

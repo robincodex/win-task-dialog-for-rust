@@ -1,0 +1,16 @@
+{
+	"folders": [
+        {
+            "name": "Example",
+            "path": "example"
+        },
+        {
+            "path": "."
+        },
+    ],
+    "settings": {
+        "files.exclude": {
+            "/example": true,
+        }
+    }
+}
