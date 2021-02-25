@@ -1,6 +1,7 @@
 # Windows Task Dialog For Rust
 
 [![Crates.io](https://img.shields.io/crates/v/win-task-dialog)](https://crates.io/crates/win-task-dialog)
+[![docs.rs](https://docs.rs/win-task-dialog/badge.svg)](https://docs.rs/win-task-dialog)
 
 Simply call the Win32 API `TaskDialogIndirect` in Rust.
 
