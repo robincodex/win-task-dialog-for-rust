@@ -10,7 +10,7 @@ Can be safely call on not windows platforms, but it has no effect.
 
 ```toml
 [dependencies]
-win-task-dialog = "0.1.2"
+win-task-dialog = "0.1.3"
 
 [build-dependencies]
 embed-resource = "1.6"
