@@ -15,14 +15,29 @@ use winapi::um::libloaderapi::GetModuleHandleA;
 #[cfg(windows)]
 use winapi::um::winnt::LPWSTR;
 
+#[cfg(not(windows))]
+type HWND = *mut usize;
+
+#[cfg(not(windows))]
+type HMODULE = *mut usize;
+
+#[cfg(not(windows))]
+type LPWSTR = *mut u16;
+
+#[cfg(not(windows))]
+#[allow(non_camel_case_types)]
+type TASKDIALOG_FLAGS = u32;
+
+#[cfg(not(windows))]
+#[allow(non_camel_case_types)]
+type TASKDIALOG_COMMON_BUTTON_FLAGS = u32;
+
 use std::io::Error;
 use std::ptr::null_mut;
 
 mod constants;
 pub use constants::*;
 
-/** TaskDialogConfig on Windows */
-#[cfg(windows)]
 pub struct TaskDialogConfig {
     pub parent: HWND,
     pub instance: HMODULE,
@@ -42,28 +57,6 @@ pub struct TaskDialogConfig {
     pub default_radio_buttons: i32,
     pub main_icon: LPWSTR,
     pub footer_icon: LPWSTR,
-}
-/** TaskDialogConfig not on Windows */
-#[cfg(not(windows))]
-pub struct TaskDialogConfig {
-    pub parent: *mut usize,
-    pub instance: *mut usize,
-    pub flags: u32,
-    pub common_buttons: u32,
-    pub window_title: String,
-    pub main_instruction: String,
-    pub content: String,
-    pub verification_text: String,
-    pub expanded_information: String,
-    pub expanded_control_text: String,
-    pub collapsed_control_text: String,
-    pub footer: String,
-    pub buttons: Vec<TaskDialogButton>,
-    pub default_button: i32,
-    pub radio_buttons: Vec<TaskDialogButton>,
-    pub default_radio_buttons: i32,
-    pub main_icon: *mut u16,
-    pub footer_icon: *mut u16,
 }
 
 impl Default for TaskDialogConfig {
@@ -117,9 +110,9 @@ impl Default for TaskDialogResult {
 pub fn show_task_dialog(conf: &TaskDialogConfig) -> Result<TaskDialogResult, Error> {
     let mut result = TaskDialogResult::default();
 
+    use std::ffi::OsStr;
     use std::iter::once;
     use std::mem;
-    use std::ffi::OsStr;
     use std::os::windows::ffi::OsStrExt;
     /** Convert string to wide string */
     fn to_os_string(text: &String) -> Vec<u16> {
