@@ -90,6 +90,9 @@ fn show_process_bar() {
     thread::spawn(move || unsafe {
         let conf = std::mem::transmute::<isize, *mut TaskDialogConfig>(conf_long_ptr);
         for i in 0..101 {
+            if (*conf).is_destroyed {
+                return;
+            }
             thread::sleep(Duration::from_millis(20));
             (*conf).set_process_bar(i);
         }

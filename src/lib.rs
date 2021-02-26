@@ -13,7 +13,7 @@ use winapi::um::commctrl::{
     TASKDIALOG_BUTTON, TASKDIALOG_COMMON_BUTTON_FLAGS, TASKDIALOG_FLAGS,
 };
 #[cfg(windows)]
-pub use winapi::um::commctrl::{
+use winapi::um::commctrl::{
     TDF_SHOW_MARQUEE_PROGRESS_BAR, TDF_SHOW_PROGRESS_BAR, TDM_SET_PROGRESS_BAR_MARQUEE,
     TDM_SET_PROGRESS_BAR_POS, TDN_CREATED, TDN_DESTROYED,
 };
@@ -101,8 +101,10 @@ impl Default for TaskDialogConfig {
 #[cfg(windows)]
 impl TaskDialogConfig {
     /**
-    Add TDF_SHOW_PROGRESS_BAR flag on marquee is false,
-    Add TDF_SHOW_MARQUEE_PROGRESS_BAR flag on marquee is true,
+    Add TDF_SHOW_PROGRESS_BAR flag on marquee is false;
+
+    Add TDF_SHOW_MARQUEE_PROGRESS_BAR flag on marquee is true;
+
     https://docs.microsoft.com/en-us/windows/win32/controls/progress-bar-control
     */
     pub fn enable_process_bar(&mut self, marquee: bool) {

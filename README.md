@@ -7,11 +7,11 @@ Simply call the Win32 API `TaskDialogIndirect` in Rust.
 
 Can be safely call on not windows platforms, but it has no effect.
 
-# Dependencies
+## Dependencies
 
 ```toml
 [dependencies]
-win-task-dialog = "0.1.4"
+win-task-dialog = "0.1.5"
 
 [build-dependencies]
 embed-resource = "1.6"
@@ -19,10 +19,14 @@ embed-resource = "1.6"
 
 > NOTE: You must be [Enabling Visual Styles](https://docs.microsoft.com/en-us/windows/win32/controls/cookbook-overview#using-comctl32dll-version-6-in-an-application-that-uses-only-standard-extensions) and using [embed-resource](https://github.com/nabijaczleweli/rust-embed-resource) to change manifest.
 
-# Example
+## Example
 
 See [example/src/main.rs](https://github.com/RobinCodeX/win-task-dialog-for-rust/blob/main/example/src/main.rs)
 
-# Example Screenshot
+## About Process Bar
+
+I used a very unsafe way to implement these functions and I didn't have a good way to solve this problem.
+
+## Screenshot
 
 ![Screenshot](https://user-images.githubusercontent.com/8408783/108849894-a50aa700-761d-11eb-8e19-ccd7aea12ba6.png)
