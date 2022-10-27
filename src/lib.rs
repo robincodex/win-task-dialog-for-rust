@@ -15,7 +15,7 @@ use winapi::um::commctrl::{
 #[cfg(windows)]
 use winapi::um::commctrl::{
     TDF_SHOW_MARQUEE_PROGRESS_BAR, TDF_SHOW_PROGRESS_BAR, TDM_SET_PROGRESS_BAR_MARQUEE,
-    TDM_SET_PROGRESS_BAR_POS, TDN_CREATED, TDN_DESTROYED,
+    TDM_SET_PROGRESS_BAR_POS, TDN_CREATED, TDN_DESTROYED, TDN_HYPERLINK_CLICKED,
 };
 #[cfg(windows)]
 use winapi::um::libloaderapi::GetModuleHandleA;
@@ -69,6 +69,7 @@ pub struct TaskDialogConfig {
     pub dialog_hwnd: HWND,
     /** When close the dialog, the value set to true, default is false. */
     pub is_destroyed: bool,
+    pub hyperlinkclicked_callback: fn(link: String) -> (),
 }
 
 impl Default for TaskDialogConfig {
@@ -94,6 +95,7 @@ impl Default for TaskDialogConfig {
             footer_icon: null_mut(),
             dialog_hwnd: null_mut(),
             is_destroyed: false,
+            hyperlinkclicked_callback: |_| {},
         }
     }
 }
@@ -193,6 +195,18 @@ pub fn show_task_dialog(conf: &mut TaskDialogConfig) -> Result<TaskDialogResult,
         OsStr::new(text).encode_wide().chain(once(0)).collect()
     }
 
+    fn from_wide_ptr(ptr: *const u16) -> String {
+        use std::ffi::OsString;
+        use std::os::windows::ffi::OsStringExt;
+        unsafe {
+            let len = (0..std::isize::MAX)
+                .position(|i| *ptr.offset(i) == 0)
+                .unwrap();
+            let slice = std::slice::from_raw_parts(ptr, len);
+            OsString::from_wide(slice).to_string_lossy().into_owned()
+        }
+    }
+
     let ret = unsafe {
         // Call GetModuleHandleA on conf.instance is null
         let instance = if conf.instance == null_mut() {
@@ -263,6 +277,13 @@ pub fn show_task_dialog(conf: &mut TaskDialogConfig) -> Result<TaskDialogResult,
                 unsafe {
                     let conf = std::mem::transmute::<isize, *mut TaskDialogConfig>(lp_ref_data);
                     (*conf).is_destroyed = true;
+                }
+            } else if msg == TDN_HYPERLINK_CLICKED {
+                unsafe {
+                    let conf = std::mem::transmute::<isize, *mut TaskDialogConfig>(lp_ref_data);
+                    let link = from_wide_ptr(_l_param as *const u16);
+                    let callback_func = (*conf).hyperlinkclicked_callback;
+                    callback_func(link);
                 }
             }
             0

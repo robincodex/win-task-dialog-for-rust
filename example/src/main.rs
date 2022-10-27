@@ -4,15 +4,19 @@ use std::thread;
 use std::time::Duration;
 use win_task_dialog::*;
 
+fn callback(link: String) {
+    println!("{}", link);
+}
+
 fn main() {
     let mut conf = TaskDialogConfig {
-        flags: TDF_USE_COMMAND_LINKS,
+        flags: TDF_USE_COMMAND_LINKS | TDF_ENABLE_HYPERLINKS,
         common_buttons: TDCBF_OK_BUTTON | TDCBF_CANCEL_BUTTON,
         window_title: "Title 标题".to_string(),
         main_instruction: "Привет".to_string(),
         content: "こんにちは".to_string(),
         verification_text: "VerificationText".to_string(),
-        footer: "footer".to_string(),
+        footer: "footer\n<a href=\"http://example.com\">example.com</a>".to_string(),
         buttons: vec![
             TaskDialogButton {
                 id: 10,
@@ -36,6 +40,7 @@ fn main() {
         ],
         main_icon: TD_SHIELD_ICON,
         footer_icon: TD_INFORMATION_ICON,
+        hyperlinkclicked_callback: callback,
         ..TaskDialogConfig::default()
     };
 
