@@ -2,6 +2,8 @@
 extern crate winapi;
 
 #[cfg(windows)]
+use widestring::U16CString;
+#[cfg(windows)]
 use winapi::shared::basetsd::LONG_PTR;
 #[cfg(windows)]
 use winapi::shared::minwindef::*;
@@ -11,6 +13,10 @@ use winapi::shared::windef::HWND;
 use winapi::um::commctrl::{
     TASKDIALOGCONFIG_u1, TASKDIALOGCONFIG_u2, TaskDialogIndirect, HRESULT, TASKDIALOGCONFIG,
     TASKDIALOG_BUTTON, TASKDIALOG_COMMON_BUTTON_FLAGS, TASKDIALOG_FLAGS,
+};
+use winapi::um::commctrl::{
+    TDE_CONTENT, TDE_EXPANDED_INFORMATION, TDE_FOOTER, TDE_MAIN_INSTRUCTION,
+    TDM_UPDATE_ELEMENT_TEXT,
 };
 #[cfg(windows)]
 use winapi::um::commctrl::{
@@ -149,6 +155,70 @@ impl TaskDialogConfig {
             SendMessageA(self.dialog_hwnd, TDM_SET_PROGRESS_BAR_POS, percentage, 0);
         }
     }
+
+    /** Set the content text */
+    pub fn set_content(&mut self, content: &str) {
+        if self.dialog_hwnd == null_mut() {
+            return;
+        }
+        let content_wchar = U16CString::from_str(content).unwrap();
+        unsafe {
+            SendMessageA(
+                self.dialog_hwnd,
+                TDM_UPDATE_ELEMENT_TEXT,
+                TDE_CONTENT as _,
+                content_wchar.as_ptr() as _,
+            );
+        }
+    }
+
+    /** Set the main instruction text */
+    pub fn set_main_instruction(&mut self, main_instruction: &str) {
+        if self.dialog_hwnd == null_mut() {
+            return;
+        }
+        let main_instruction_wchar = U16CString::from_str(main_instruction).unwrap();
+        unsafe {
+            SendMessageA(
+                self.dialog_hwnd,
+                TDM_UPDATE_ELEMENT_TEXT,
+                TDE_MAIN_INSTRUCTION as _,
+                main_instruction_wchar.as_ptr() as _,
+            );
+        }
+    }
+
+    /** Set the footer text */
+    pub fn set_footer(&mut self, footer: &str) {
+        if self.dialog_hwnd == null_mut() {
+            return;
+        }
+        let footer_wchar = U16CString::from_str(footer).unwrap();
+        unsafe {
+            SendMessageA(
+                self.dialog_hwnd,
+                TDM_UPDATE_ELEMENT_TEXT,
+                TDE_FOOTER as _,
+                footer_wchar.as_ptr() as _,
+            );
+        }
+    }
+
+    /** Set the expanded information text */
+    pub fn set_expanded_information(&mut self, expanded_information: &str) {
+        if self.dialog_hwnd == null_mut() {
+            return;
+        }
+        let expanded_information_wchar = U16CString::from_str(expanded_information).unwrap();
+        unsafe {
+            SendMessageA(
+                self.dialog_hwnd,
+                TDM_UPDATE_ELEMENT_TEXT,
+                TDE_EXPANDED_INFORMATION as _,
+                expanded_information_wchar.as_ptr() as _,
+            );
+        }
+    }
 }
 
 #[cfg(not(windows))]
@@ -156,6 +226,10 @@ impl TaskDialogConfig {
     pub fn enable_process_bar(&mut self, _marquee: bool) {}
     pub fn set_process_bar_marquee(&mut self, _enable: bool, _time: isize) {}
     pub fn set_process_bar(&mut self, _percentage: usize) {}
+    pub fn set_content(&mut self, content: &str) {}
+    pub fn set_main_instruction(&mut self, main_instruction: &str) {}
+    pub fn set_footer(&mut self, footer: &str) {}
+    pub fn set_expanded_information(&mut self, expanded_information: &str) {}
 }
 
 pub struct TaskDialogButton {
