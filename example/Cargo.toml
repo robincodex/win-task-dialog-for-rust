@@ -8,4 +8,4 @@ edition = "2018"
 win-task-dialog = {path = "../"}
 
 [build-dependencies]
-embed-resource = "1.6"
+embed-resource = "2.1"
