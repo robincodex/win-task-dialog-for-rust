@@ -11,10 +11,10 @@ Can be safely call on not windows platforms, but it has no effect.
 
 ```toml
 [dependencies]
-win-task-dialog = "0.1.6"
+win-task-dialog = "0.1.7"
 
 [build-dependencies]
-embed-resource = "1.6"
+embed-resource = "2.1"
 ```
 
 > NOTE: You must be [Enabling Visual Styles](https://docs.microsoft.com/en-us/windows/win32/controls/cookbook-overview#using-comctl32dll-version-6-in-an-application-that-uses-only-standard-extensions) and using [embed-resource](https://github.com/nabijaczleweli/rust-embed-resource) to change manifest.
