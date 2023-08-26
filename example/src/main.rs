@@ -4,8 +4,22 @@ use std::thread;
 use std::time::Duration;
 use win_task_dialog::*;
 
-fn callback(link: String) {
-    println!("{}", link);
+fn hyperlink_callback(context: &str) {
+    println!("hyperlink_callback: {}", context);
+}
+
+unsafe extern "system" fn callback(
+    hwnd: HWND,
+    msg: u32,
+    w_param: usize,
+    l_param: isize,
+    ref_data: *mut TaskDialogConfig,
+) -> i32 {
+    println!(
+        "callback: hwnd={:?} msg={} wparam={:#X} lparam={:#X} ref_data={:?}",
+        hwnd, msg, w_param, l_param, ref_data
+    );
+    0
 }
 
 fn main() {
@@ -40,7 +54,8 @@ fn main() {
         ],
         main_icon: TD_SHIELD_ICON,
         footer_icon: TD_INFORMATION_ICON,
-        hyperlinkclicked_callback: callback,
+        hyperlink_callback: Some(hyperlink_callback),
+        callback: Some(callback),
         ..TaskDialogConfig::default()
     };
 
