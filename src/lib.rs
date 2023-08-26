@@ -149,7 +149,7 @@ impl TaskDialogConfig {
 
     /** Set status or animation time of marquee progress bar */
     pub fn set_process_bar_marquee(&mut self, enable: bool, time: isize) {
-        if self.dialog_hwnd == null_mut() {
+        if self.dialog_hwnd.is_null() {
             return;
         }
         unsafe {
@@ -168,7 +168,7 @@ impl TaskDialogConfig {
 
     /** Set the percentage of the progress bar */
     pub fn set_process_bar(&mut self, percentage: usize) {
-        if self.dialog_hwnd == null_mut() {
+        if self.dialog_hwnd.is_null() {
             return;
         }
         unsafe {
@@ -178,7 +178,7 @@ impl TaskDialogConfig {
 
     /** Set the content text */
     pub fn set_content(&mut self, content: &str) {
-        if self.dialog_hwnd == null_mut() {
+        if self.dialog_hwnd.is_null() {
             return;
         }
         let content_wchar = U16CString::from_str(content).unwrap();
@@ -194,7 +194,7 @@ impl TaskDialogConfig {
 
     /** Set the main instruction text */
     pub fn set_main_instruction(&mut self, main_instruction: &str) {
-        if self.dialog_hwnd == null_mut() {
+        if self.dialog_hwnd.is_null() {
             return;
         }
         let main_instruction_wchar = U16CString::from_str(main_instruction).unwrap();
@@ -210,7 +210,7 @@ impl TaskDialogConfig {
 
     /** Set the footer text */
     pub fn set_footer(&mut self, footer: &str) {
-        if self.dialog_hwnd == null_mut() {
+        if self.dialog_hwnd.is_null() {
             return;
         }
         let footer_wchar = U16CString::from_str(footer).unwrap();
@@ -226,7 +226,7 @@ impl TaskDialogConfig {
 
     /** Set the expanded information text */
     pub fn set_expanded_information(&mut self, expanded_information: &str) {
-        if self.dialog_hwnd == null_mut() {
+        if self.dialog_hwnd.is_null() {
             return;
         }
         let expanded_information_wchar = U16CString::from_str(expanded_information).unwrap();
@@ -240,8 +240,9 @@ impl TaskDialogConfig {
         }
     }
 
+    /** Set the button elevation state */
     pub fn set_button_elevation_required_state(&mut self, button_id: usize, enable: bool) {
-        if self.dialog_hwnd == null_mut() {
+        if self.dialog_hwnd.is_null() {
             return;
         }
         unsafe {
