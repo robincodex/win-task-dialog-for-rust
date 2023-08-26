@@ -292,8 +292,6 @@ impl Default for TaskDialogResult {
 /** Show task dialog */
 #[cfg(windows)]
 pub fn show_task_dialog(conf: &mut TaskDialogConfig) -> Result<TaskDialogResult, Error> {
-    use std::mem;
-
     let mut result = TaskDialogResult::default();
     let conf_ptr: *mut TaskDialogConfig = conf;
     let conf_long_ptr = conf_ptr as isize;
@@ -388,7 +386,7 @@ pub fn show_task_dialog(conf: &mut TaskDialogConfig) -> Result<TaskDialogResult,
         }
 
         let config = TASKDIALOGCONFIG {
-            cbSize: mem::size_of::<TASKDIALOGCONFIG>() as UINT,
+            cbSize: std::mem::size_of::<TASKDIALOGCONFIG>() as UINT,
             hwndParent: conf.parent,
             hInstance: instance,
             dwFlags: conf.flags,
