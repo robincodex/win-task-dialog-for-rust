@@ -8,7 +8,9 @@ use winapi::shared::basetsd::LONG_PTR;
 #[cfg(windows)]
 use winapi::shared::minwindef::*;
 #[cfg(windows)]
-use winapi::shared::windef::HWND;
+pub use winapi::shared::windef::HWND;
+#[cfg(windows)]
+use winapi::shared::winerror::S_OK;
 #[cfg(windows)]
 use winapi::um::commctrl::{
     TASKDIALOGCONFIG_u1, TASKDIALOGCONFIG_u2, TaskDialogIndirect, HRESULT, TASKDIALOGCONFIG,
@@ -51,6 +53,18 @@ type TASKDIALOG_COMMON_BUTTON_FLAGS = u32;
 use std::ptr::null_mut;
 use std::{io::Error, usize};
 
+pub type TaskDialogHyperlinkCallback = Option<fn(context: &str) -> ()>;
+
+pub type TaskDialogWndProcCallback = Option<
+    unsafe extern "system" fn(
+        hwnd: HWND,
+        msg: UINT,
+        w_param: WPARAM,
+        l_param: LPARAM,
+        ref_data: *mut TaskDialogConfig,
+    ) -> HRESULT,
+>;
+
 mod constants;
 pub use constants::*;
 pub struct TaskDialogConfig {
@@ -76,7 +90,9 @@ pub struct TaskDialogConfig {
     pub dialog_hwnd: HWND,
     /** When close the dialog, the value set to true, default is false. */
     pub is_destroyed: bool,
-    pub hyperlinkclicked_callback: fn(link: String) -> (),
+    pub hyperlink_callback: TaskDialogHyperlinkCallback,
+    pub callback: TaskDialogWndProcCallback,
+    pub cx_width: u32,
 }
 
 impl Default for TaskDialogConfig {
@@ -102,7 +118,9 @@ impl Default for TaskDialogConfig {
             footer_icon: null_mut(),
             dialog_hwnd: null_mut(),
             is_destroyed: false,
-            hyperlinkclicked_callback: |_| {},
+            hyperlink_callback: None,
+            callback: None,
+            cx_width: 0,
         }
     }
 }
@@ -285,30 +303,36 @@ pub fn show_task_dialog(conf: &mut TaskDialogConfig) -> Result<TaskDialogResult,
         let footer: U16CString = U16CString::from_str_unchecked(&conf.footer);
 
         // Buttons
-        let mut buttons: Vec<TASKDIALOG_BUTTON> = Vec::new();
-        let mut btn_text: Vec<U16CString> = Vec::new();
-        for v in conf.buttons.iter() {
-            btn_text.push(U16CString::from_str_unchecked(&v.text));
-        }
-        for i in 0..conf.buttons.len() {
-            buttons.push(TASKDIALOG_BUTTON {
-                nButtonID: conf.buttons[i].id,
+        let btn_text: Vec<U16CString> = conf
+            .buttons
+            .iter()
+            .map(|btn| U16CString::from_str_unchecked(&btn.text))
+            .collect();
+        let buttons: Vec<TASKDIALOG_BUTTON> = conf
+            .buttons
+            .iter()
+            .enumerate()
+            .map(|(i, btn)| TASKDIALOG_BUTTON {
+                nButtonID: btn.id,
                 pszButtonText: btn_text[i].as_ptr(),
-            });
-        }
+            })
+            .collect();
 
         // Radio Buttons
-        let mut radio_buttons: Vec<TASKDIALOG_BUTTON> = Vec::new();
-        let mut radio_btn_text: Vec<U16CString> = Vec::new();
-        for v in conf.radio_buttons.iter() {
-            radio_btn_text.push(U16CString::from_str_unchecked(&v.text));
-        }
-        for i in 0..conf.radio_buttons.len() {
-            radio_buttons.push(TASKDIALOG_BUTTON {
-                nButtonID: conf.radio_buttons[i].id,
+        let radio_btn_text: Vec<U16CString> = conf
+            .radio_buttons
+            .iter()
+            .map(|btn| U16CString::from_str_unchecked(&btn.text))
+            .collect();
+        let radio_buttons: Vec<TASKDIALOG_BUTTON> = conf
+            .radio_buttons
+            .iter()
+            .enumerate()
+            .map(|(i, btn)| TASKDIALOG_BUTTON {
+                nButtonID: btn.id,
                 pszButtonText: radio_btn_text[i].as_ptr(),
-            });
-        }
+            })
+            .collect();
 
         // ICON
         let mut u1: TASKDIALOGCONFIG_u1 = Default::default();
@@ -320,34 +344,30 @@ pub fn show_task_dialog(conf: &mut TaskDialogConfig) -> Result<TaskDialogResult,
             core::ptr::write(u2.pszFooterIcon_mut(), conf.footer_icon as *const u16);
         }
 
-        extern "system" fn callback(
+        unsafe extern "system" fn callback(
             hwnd: HWND,
             msg: UINT,
             _w_param: WPARAM,
             _l_param: LPARAM,
             lp_ref_data: LONG_PTR,
         ) -> HRESULT {
+            let conf = std::mem::transmute::<isize, *mut TaskDialogConfig>(lp_ref_data);
             if msg == TDN_CREATED {
-                unsafe {
-                    let conf = std::mem::transmute::<isize, *mut TaskDialogConfig>(lp_ref_data);
-                    (*conf).dialog_hwnd = hwnd;
-                }
+                (*conf).dialog_hwnd = hwnd;
             } else if msg == TDN_DESTROYED {
-                unsafe {
-                    let conf = std::mem::transmute::<isize, *mut TaskDialogConfig>(lp_ref_data);
-                    (*conf).is_destroyed = true;
-                }
+                (*conf).is_destroyed = true;
             } else if msg == TDN_HYPERLINK_CLICKED {
-                unsafe {
-                    let conf = std::mem::transmute::<isize, *mut TaskDialogConfig>(lp_ref_data);
-                    let link = U16CString::from_ptr_str(_l_param as *const u16)
-                        .to_string()
-                        .unwrap();
-                    let callback_func = (*conf).hyperlinkclicked_callback;
-                    callback_func(link);
+                let link = U16CString::from_ptr_str(_l_param as *const u16)
+                    .to_string()
+                    .unwrap();
+                if let Some(callback) = (*conf).hyperlink_callback {
+                    callback(&link);
                 }
             }
-            0
+            if let Some(callback) = (*conf).callback {
+                return callback(hwnd, msg, _w_param, _l_param, lp_ref_data as _);
+            }
+            S_OK
         }
 
         let config = TASKDIALOGCONFIG {
@@ -374,7 +394,7 @@ pub fn show_task_dialog(conf: &mut TaskDialogConfig) -> Result<TaskDialogResult,
             u2,
             pfCallback: Some(callback),
             lpCallbackData: conf_long_ptr,
-            cxWidth: 0,
+            cxWidth: conf.cx_width,
         };
 
         // Result
