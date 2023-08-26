@@ -257,54 +257,38 @@ impl Default for TaskDialogResult {
 /** Show task dialog */
 #[cfg(windows)]
 pub fn show_task_dialog(conf: &mut TaskDialogConfig) -> Result<TaskDialogResult, Error> {
+    use std::mem;
+
     let mut result = TaskDialogResult::default();
     let conf_ptr: *mut TaskDialogConfig = conf;
     let conf_long_ptr = conf_ptr as isize;
 
-    use std::ffi::OsStr;
-    use std::iter::once;
-    use std::mem;
-    use std::os::windows::ffi::OsStrExt;
-    /** Convert string to wide string */
-    fn to_os_string(text: &String) -> Vec<u16> {
-        OsStr::new(text).encode_wide().chain(once(0)).collect()
-    }
-
-    fn from_wide_ptr(ptr: *const u16) -> String {
-        use std::ffi::OsString;
-        use std::os::windows::ffi::OsStringExt;
-        unsafe {
-            let len = (0..std::isize::MAX)
-                .position(|i| *ptr.offset(i) == 0)
-                .unwrap();
-            let slice = std::slice::from_raw_parts(ptr, len);
-            OsString::from_wide(slice).to_string_lossy().into_owned()
-        }
-    }
-
     let ret = unsafe {
         // Call GetModuleHandleA on conf.instance is null
-        let instance = if conf.instance == null_mut() {
+        let instance = if conf.instance.is_null() {
             GetModuleHandleA(std::ptr::null())
         } else {
             conf.instance
         };
 
         // Some text
-        let window_title: Vec<u16> = to_os_string(&conf.window_title);
-        let main_instruction: Vec<u16> = to_os_string(&conf.main_instruction);
-        let content: Vec<u16> = to_os_string(&conf.content);
-        let verification_text: Vec<u16> = to_os_string(&conf.verification_text);
-        let expanded_information: Vec<u16> = to_os_string(&conf.expanded_information);
-        let expanded_control_text: Vec<u16> = to_os_string(&conf.expanded_control_text);
-        let collapsed_control_text: Vec<u16> = to_os_string(&conf.collapsed_control_text);
-        let footer: Vec<u16> = to_os_string(&conf.footer);
+        let window_title: U16CString = U16CString::from_str_unchecked(&conf.window_title);
+        let main_instruction: U16CString = U16CString::from_str_unchecked(&conf.main_instruction);
+        let content: U16CString = U16CString::from_str_unchecked(&conf.content);
+        let verification_text: U16CString = U16CString::from_str_unchecked(&conf.verification_text);
+        let expanded_information: U16CString =
+            U16CString::from_str_unchecked(&conf.expanded_information);
+        let expanded_control_text: U16CString =
+            U16CString::from_str_unchecked(&conf.expanded_control_text);
+        let collapsed_control_text: U16CString =
+            U16CString::from_str_unchecked(&conf.collapsed_control_text);
+        let footer: U16CString = U16CString::from_str_unchecked(&conf.footer);
 
         // Buttons
         let mut buttons: Vec<TASKDIALOG_BUTTON> = Vec::new();
-        let mut btn_text: Vec<Vec<u16>> = Vec::new();
+        let mut btn_text: Vec<U16CString> = Vec::new();
         for v in conf.buttons.iter() {
-            btn_text.push(to_os_string(&v.text));
+            btn_text.push(U16CString::from_str_unchecked(&v.text));
         }
         for i in 0..conf.buttons.len() {
             buttons.push(TASKDIALOG_BUTTON {
@@ -315,9 +299,9 @@ pub fn show_task_dialog(conf: &mut TaskDialogConfig) -> Result<TaskDialogResult,
 
         // Radio Buttons
         let mut radio_buttons: Vec<TASKDIALOG_BUTTON> = Vec::new();
-        let mut radio_btn_text: Vec<Vec<u16>> = Vec::new();
+        let mut radio_btn_text: Vec<U16CString> = Vec::new();
         for v in conf.radio_buttons.iter() {
-            radio_btn_text.push(to_os_string(&v.text));
+            radio_btn_text.push(U16CString::from_str_unchecked(&v.text));
         }
         for i in 0..conf.radio_buttons.len() {
             radio_buttons.push(TASKDIALOG_BUTTON {
@@ -356,7 +340,9 @@ pub fn show_task_dialog(conf: &mut TaskDialogConfig) -> Result<TaskDialogResult,
             } else if msg == TDN_HYPERLINK_CLICKED {
                 unsafe {
                     let conf = std::mem::transmute::<isize, *mut TaskDialogConfig>(lp_ref_data);
-                    let link = from_wide_ptr(_l_param as *const u16);
+                    let link = U16CString::from_ptr_str(_l_param as *const u16)
+                        .to_string()
+                        .unwrap();
                     let callback_func = (*conf).hyperlinkclicked_callback;
                     callback_func(link);
                 }
