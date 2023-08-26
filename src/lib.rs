@@ -11,6 +11,7 @@ use winapi::shared::minwindef::*;
 pub use winapi::shared::windef::HWND;
 #[cfg(windows)]
 use winapi::shared::winerror::S_OK;
+use winapi::um::commctrl::TDM_SET_BUTTON_ELEVATION_REQUIRED_STATE;
 #[cfg(windows)]
 use winapi::um::commctrl::{
     TASKDIALOGCONFIG_u1, TASKDIALOGCONFIG_u2, TaskDialogIndirect, HRESULT, TASKDIALOGCONFIG,
@@ -238,6 +239,20 @@ impl TaskDialogConfig {
             );
         }
     }
+
+    pub fn set_button_elevation_required_state(&mut self, button_id: usize, enable: bool) {
+        if self.dialog_hwnd == null_mut() {
+            return;
+        }
+        unsafe {
+            SendMessageA(
+                self.dialog_hwnd,
+                TDM_SET_BUTTON_ELEVATION_REQUIRED_STATE,
+                button_id,
+                if enable { 1 } else { 0 },
+            );
+        }
+    }
 }
 
 #[cfg(not(windows))]
@@ -249,6 +264,7 @@ impl TaskDialogConfig {
     pub fn set_main_instruction(&mut self, main_instruction: &str) {}
     pub fn set_footer(&mut self, footer: &str) {}
     pub fn set_expanded_information(&mut self, expanded_information: &str) {}
+    pub fn set_button_elevation_required_state(&mut self, button_id: usize, enable: bool) {}
 }
 
 pub struct TaskDialogButton {
