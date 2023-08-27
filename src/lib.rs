@@ -187,6 +187,7 @@ impl TaskDialogConfig {
         if self.dialog_hwnd.is_null() {
             return;
         }
+        self.content = content.to_string();
         let content_wchar = U16CString::from_str(content).unwrap();
         unsafe {
             SendMessageA(
@@ -203,6 +204,7 @@ impl TaskDialogConfig {
         if self.dialog_hwnd.is_null() {
             return;
         }
+        self.main_instruction = main_instruction.to_string();
         let main_instruction_wchar = U16CString::from_str(main_instruction).unwrap();
         unsafe {
             SendMessageA(
@@ -219,6 +221,7 @@ impl TaskDialogConfig {
         if self.dialog_hwnd.is_null() {
             return;
         }
+        self.footer = footer.to_string();
         let footer_wchar = U16CString::from_str(footer).unwrap();
         unsafe {
             SendMessageA(
@@ -235,6 +238,7 @@ impl TaskDialogConfig {
         if self.dialog_hwnd.is_null() {
             return;
         }
+        self.expanded_information = expanded_information.to_string();
         let expanded_information_wchar = U16CString::from_str(expanded_information).unwrap();
         unsafe {
             SendMessageA(
