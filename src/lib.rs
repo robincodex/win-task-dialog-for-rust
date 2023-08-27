@@ -144,11 +144,24 @@ impl TaskDialogConfig {
     pub fn enable_process_bar(&mut self, marquee: bool) {
         if marquee {
             if self.flags & TDF_SHOW_MARQUEE_PROGRESS_BAR != TDF_SHOW_MARQUEE_PROGRESS_BAR {
-                self.flags = self.flags | TDF_SHOW_MARQUEE_PROGRESS_BAR;
+                self.flags |= TDF_SHOW_MARQUEE_PROGRESS_BAR;
             }
         } else {
             if self.flags & TDF_SHOW_PROGRESS_BAR != TDF_SHOW_PROGRESS_BAR {
-                self.flags = self.flags | TDF_SHOW_PROGRESS_BAR;
+                self.flags |= TDF_SHOW_PROGRESS_BAR;
+            }
+        }
+    }
+
+    /** disables progress bar */
+    pub fn disable_process_bar(&mut self, marquee: bool) {
+        if marquee {
+            if self.flags & TDF_SHOW_MARQUEE_PROGRESS_BAR == TDF_SHOW_MARQUEE_PROGRESS_BAR {
+                self.flags &= !TDF_SHOW_MARQUEE_PROGRESS_BAR;
+            }
+        } else {
+            if self.flags & TDF_SHOW_PROGRESS_BAR == TDF_SHOW_PROGRESS_BAR {
+                self.flags &= !TDF_SHOW_PROGRESS_BAR;
             }
         }
     }
@@ -277,6 +290,7 @@ impl TaskDialogConfig {
 #[cfg(not(windows))]
 impl TaskDialogConfig {
     pub fn enable_process_bar(&mut self, _marquee: bool) {}
+    pub fn disable_process_bar(&mut self, marquee: bool) {}
     pub fn set_process_bar_marquee(&mut self, _enable: bool, _time: isize) {}
     pub fn set_process_bar(&mut self, _percentage: usize) {}
     pub fn set_content(&mut self, content: &str) {}
