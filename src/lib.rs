@@ -23,9 +23,10 @@ use winapi::um::commctrl::{
     TDM_UPDATE_ELEMENT_TEXT,
 };
 #[cfg(windows)]
-use winapi::um::commctrl::{
+pub use winapi::um::commctrl::{
     TDF_SHOW_MARQUEE_PROGRESS_BAR, TDF_SHOW_PROGRESS_BAR, TDM_SET_PROGRESS_BAR_MARQUEE,
-    TDM_SET_PROGRESS_BAR_POS, TDN_CREATED, TDN_DESTROYED, TDN_HYPERLINK_CLICKED,
+    TDM_SET_PROGRESS_BAR_POS, TDN_BUTTON_CLICKED, TDN_CREATED, TDN_DESTROYED,
+    TDN_HYPERLINK_CLICKED, TDN_NAVIGATED,
 };
 #[cfg(windows)]
 use winapi::um::libloaderapi::GetModuleHandleA;
@@ -65,6 +66,11 @@ pub type TaskDialogWndProcCallback = Option<
         ref_data: *mut TaskDialogConfig,
     ) -> HRESULT,
 >;
+
+pub enum ExecuteOption {
+    TaskDialogIndirect,
+    TaskDialogNavigate,
+}
 
 mod constants;
 pub use constants::*;
@@ -254,6 +260,14 @@ impl TaskDialogConfig {
             );
         }
     }
+
+    /** Navigate to new page */
+    pub fn navigate_page(&mut self, conf: &mut TaskDialogConfig) {
+        if self.dialog_hwnd.is_null() {
+            return;
+        }
+        execute_task_dialog(conf, ExecuteOption::TaskDialogNavigate).ok();
+    }
 }
 
 #[cfg(not(windows))]
@@ -266,6 +280,7 @@ impl TaskDialogConfig {
     pub fn set_footer(&mut self, footer: &str) {}
     pub fn set_expanded_information(&mut self, expanded_information: &str) {}
     pub fn set_button_elevation_required_state(&mut self, button_id: usize, enable: bool) {}
+    pub fn navigate_page(&mut self, conf: &mut TaskDialogConfig) {}
 }
 
 pub struct TaskDialogButton {
@@ -292,6 +307,19 @@ impl Default for TaskDialogResult {
 /** Show task dialog */
 #[cfg(windows)]
 pub fn show_task_dialog(conf: &mut TaskDialogConfig) -> Result<TaskDialogResult, Error> {
+    execute_task_dialog(conf, ExecuteOption::TaskDialogIndirect)
+}
+
+/** Show task dialog */
+#[cfg(windows)]
+pub fn execute_task_dialog(
+    conf: &mut TaskDialogConfig,
+    opt: ExecuteOption,
+) -> Result<TaskDialogResult, Error> {
+    use std::ptr::addr_of_mut;
+
+    use winapi::um::commctrl::TDM_NAVIGATE_PAGE;
+
     let mut result = TaskDialogResult::default();
     let conf_ptr: *mut TaskDialogConfig = conf;
     let conf_long_ptr = conf_ptr as isize;
@@ -352,11 +380,11 @@ pub fn show_task_dialog(conf: &mut TaskDialogConfig) -> Result<TaskDialogResult,
         // ICON
         let mut u1: TASKDIALOGCONFIG_u1 = Default::default();
         let mut u2: TASKDIALOGCONFIG_u2 = Default::default();
-        if conf.main_icon != null_mut() {
-            core::ptr::write(u1.pszMainIcon_mut(), conf.main_icon as *const u16);
+        if !conf.main_icon.is_null() {
+            *u1.pszMainIcon_mut() = conf.main_icon;
         }
-        if conf.footer_icon != null_mut() {
-            core::ptr::write(u2.pszFooterIcon_mut(), conf.footer_icon as *const u16);
+        if !conf.footer_icon.is_null() {
+            *u2.pszFooterIcon_mut() = conf.footer_icon;
         }
 
         unsafe extern "system" fn callback(
@@ -385,7 +413,7 @@ pub fn show_task_dialog(conf: &mut TaskDialogConfig) -> Result<TaskDialogResult,
             S_OK
         }
 
-        let config = TASKDIALOGCONFIG {
+        let mut config = TASKDIALOGCONFIG {
             cbSize: std::mem::size_of::<TASKDIALOGCONFIG>() as UINT,
             hwndParent: conf.parent,
             hInstance: instance,
@@ -412,16 +440,29 @@ pub fn show_task_dialog(conf: &mut TaskDialogConfig) -> Result<TaskDialogResult,
             cxWidth: conf.cx_width,
         };
 
-        // Result
-        let mut verify: BOOL = FALSE;
-        let dialog_result = TaskDialogIndirect(
-            &config,
-            &mut result.button_id,
-            &mut result.radio_button_id,
-            &mut verify,
-        );
-        result.checked = verify != 0;
-        dialog_result
+        match opt {
+            ExecuteOption::TaskDialogIndirect => {
+                // Result
+                let mut verify: BOOL = FALSE;
+                let dialog_result = TaskDialogIndirect(
+                    &config,
+                    &mut result.button_id,
+                    &mut result.radio_button_id,
+                    &mut verify,
+                );
+                result.checked = verify != 0;
+                dialog_result
+            }
+            ExecuteOption::TaskDialogNavigate => {
+                SendMessageA(
+                    conf.dialog_hwnd,
+                    TDM_NAVIGATE_PAGE,
+                    0,
+                    addr_of_mut!(config) as _,
+                );
+                0
+            }
+        }
     };
     if ret != 0 {
         Err(Error::last_os_error())

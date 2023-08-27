@@ -71,6 +71,8 @@ fn main() {
 
     show_msg_dialog("Title", "Hi", "Info", TD_INFORMATION_ICON);
     show_msg_dialog("Title", "!!!", "Error", TD_ERROR_ICON);
+
+    page_navigation();
 }
 
 // Show dynamic text dialog
@@ -152,6 +154,59 @@ fn show_process_bar() {
             (*conf).set_process_bar(i);
         }
     });
+
+    show_task_dialog(&mut conf).unwrap();
+}
+
+fn page_navigation() {
+    unsafe extern "system" fn page1_callback(
+        _: HWND,
+        msg: u32,
+        w_param: usize,
+        _: isize,
+        ref_data: *mut TaskDialogConfig,
+    ) -> i32 {
+        if msg == TDN_NAVIGATED {
+        } else if msg == TDN_BUTTON_CLICKED {
+            // TDN_BUTTON_CLICKED
+
+            // Note that lifetime is limited in Rust objects
+            // and we cannot make new struct in stack here.
+            // Instead we should modify `ref_data`.
+            if w_param as i32 == 1776 {
+                (*ref_data).window_title = "Page #1".to_owned();
+                (*ref_data).main_instruction = "Page #1".to_owned();
+                (*ref_data).buttons = vec![TaskDialogButton {
+                    id: 1777,
+                    text: "Continue".to_owned(),
+                }];
+                (*ref_data).navigate_page(&mut *ref_data);
+                return 1; // S_FALSE
+            } else if w_param as i32 == 1777 {
+                (*ref_data).window_title = "Page #2".to_owned();
+                (*ref_data).main_instruction = "Page #2".to_owned();
+                (*ref_data).buttons = vec![TaskDialogButton {
+                    id: 1776,
+                    text: "Back to page #1".to_owned(),
+                }];
+                (*ref_data).navigate_page(&mut *ref_data);
+                return 1; // S_FALSE
+            }
+        }
+        0
+    }
+
+    let mut conf = TaskDialogConfig {
+        window_title: "Page Navigation".to_owned(),
+        main_instruction: "Page #1".to_owned(),
+        callback: Some(page1_callback),
+        common_buttons: TDCBF_CLOSE_BUTTON,
+        buttons: vec![TaskDialogButton {
+            id: 1777,
+            text: "Continue".to_owned(),
+        }],
+        ..Default::default()
+    };
 
     show_task_dialog(&mut conf).unwrap();
 }
