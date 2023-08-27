@@ -413,18 +413,23 @@ pub fn execute_task_dialog(
             lp_ref_data: LONG_PTR,
         ) -> HRESULT {
             let conf = std::mem::transmute::<isize, *mut TaskDialogConfig>(lp_ref_data);
-            if msg == TDN_CREATED {
-                (*conf).dialog_hwnd = hwnd;
-            } else if msg == TDN_DESTROYED {
-                (*conf).is_destroyed = true;
-            } else if msg == TDN_HYPERLINK_CLICKED {
-                let link = U16CString::from_ptr_str(_l_param as *const u16)
-                    .to_string()
-                    .unwrap();
-                if let Some(callback) = (*conf).hyperlink_callback {
-                    callback(&link);
+            match msg {
+                TDN_CREATED => {
+                    (*conf).dialog_hwnd = hwnd;
                 }
-            }
+                TDN_DESTROYED => {
+                    (*conf).is_destroyed = true;
+                }
+                TDN_HYPERLINK_CLICKED => {
+                    let link = U16CString::from_ptr_str(_l_param as *const u16)
+                        .to_string()
+                        .unwrap();
+                    if let Some(callback) = (*conf).hyperlink_callback {
+                        callback(&link);
+                    }
+                }
+                _ => {}
+            };
             if let Some(callback) = (*conf).callback {
                 return callback(hwnd, msg, _w_param, _l_param, lp_ref_data as _);
             }
