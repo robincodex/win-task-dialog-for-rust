@@ -188,8 +188,8 @@ impl TaskDialogConfig {
             return;
         }
         self.content = content.to_string();
-        let content_wchar = U16CString::from_str(content).unwrap();
         unsafe {
+            let content_wchar = U16CString::from_str_unchecked(content);
             SendMessageA(
                 self.dialog_hwnd,
                 TDM_UPDATE_ELEMENT_TEXT,
@@ -205,8 +205,8 @@ impl TaskDialogConfig {
             return;
         }
         self.main_instruction = main_instruction.to_string();
-        let main_instruction_wchar = U16CString::from_str(main_instruction).unwrap();
         unsafe {
+            let main_instruction_wchar = U16CString::from_str_unchecked(main_instruction);
             SendMessageA(
                 self.dialog_hwnd,
                 TDM_UPDATE_ELEMENT_TEXT,
@@ -222,8 +222,8 @@ impl TaskDialogConfig {
             return;
         }
         self.footer = footer.to_string();
-        let footer_wchar = U16CString::from_str(footer).unwrap();
         unsafe {
+            let footer_wchar = U16CString::from_str_unchecked(footer);
             SendMessageA(
                 self.dialog_hwnd,
                 TDM_UPDATE_ELEMENT_TEXT,
@@ -239,8 +239,8 @@ impl TaskDialogConfig {
             return;
         }
         self.expanded_information = expanded_information.to_string();
-        let expanded_information_wchar = U16CString::from_str(expanded_information).unwrap();
         unsafe {
+            let expanded_information_wchar = U16CString::from_str_unchecked(expanded_information);
             SendMessageA(
                 self.dialog_hwnd,
                 TDM_UPDATE_ELEMENT_TEXT,
