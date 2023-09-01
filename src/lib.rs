@@ -11,6 +11,7 @@ use winapi::shared::minwindef::*;
 pub use winapi::shared::windef::HWND;
 #[cfg(windows)]
 use winapi::shared::winerror::S_OK;
+#[cfg(windows)]
 use winapi::um::commctrl::TDM_SET_BUTTON_ELEVATION_REQUIRED_STATE;
 #[cfg(windows)]
 use winapi::um::commctrl::{
@@ -23,12 +24,6 @@ use winapi::um::commctrl::{
     TDM_UPDATE_ELEMENT_TEXT,
 };
 #[cfg(windows)]
-pub use winapi::um::commctrl::{
-    TDF_SHOW_MARQUEE_PROGRESS_BAR, TDF_SHOW_PROGRESS_BAR, TDM_SET_PROGRESS_BAR_MARQUEE,
-    TDM_SET_PROGRESS_BAR_POS, TDN_BUTTON_CLICKED, TDN_CREATED, TDN_DESTROYED,
-    TDN_HYPERLINK_CLICKED, TDN_NAVIGATED,
-};
-#[cfg(windows)]
 use winapi::um::libloaderapi::GetModuleHandleA;
 #[cfg(windows)]
 use winapi::um::winnt::LPWSTR;
@@ -36,13 +31,25 @@ use winapi::um::winnt::LPWSTR;
 use winapi::um::winuser::SendMessageA;
 
 #[cfg(not(windows))]
-type HWND = *mut usize;
+pub type HWND = *mut usize;
 
 #[cfg(not(windows))]
 type HMODULE = *mut usize;
 
 #[cfg(not(windows))]
 type LPWSTR = *mut u16;
+
+#[cfg(not(windows))]
+type WPARAM = usize;
+
+#[cfg(not(windows))]
+type LPARAM = isize;
+
+#[cfg(not(windows))]
+type HRESULT = i32;
+
+#[cfg(not(windows))]
+type UINT = u32;
 
 #[cfg(not(windows))]
 #[allow(non_camel_case_types)]
