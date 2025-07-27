@@ -1,34 +1,29 @@
 #[cfg(windows)]
-extern crate winapi;
-
-#[cfg(windows)]
 use widestring::U16CString;
 #[cfg(windows)]
-use winapi::shared::basetsd::LONG_PTR;
-#[cfg(windows)]
-use winapi::shared::minwindef::*;
-#[cfg(windows)]
-pub use winapi::shared::windef::HWND;
-#[cfg(windows)]
-use winapi::shared::winerror::S_OK;
-#[cfg(windows)]
-use winapi::um::commctrl::TDM_SET_BUTTON_ELEVATION_REQUIRED_STATE;
-#[cfg(windows)]
-use winapi::um::commctrl::{
-    TASKDIALOGCONFIG_u1, TASKDIALOGCONFIG_u2, TaskDialogIndirect, HRESULT, TASKDIALOGCONFIG,
-    TASKDIALOG_BUTTON, TASKDIALOG_COMMON_BUTTON_FLAGS, TASKDIALOG_FLAGS,
+pub use windows::{
+    core::HRESULT,
+    Win32::{
+        Foundation::{HWND, LPARAM, S_FALSE, S_OK, WPARAM},
+        UI::Controls::TASKDIALOG_NOTIFICATIONS,
+    },
 };
 #[cfg(windows)]
-use winapi::um::commctrl::{
-    TDE_CONTENT, TDE_EXPANDED_INFORMATION, TDE_FOOTER, TDE_MAIN_INSTRUCTION,
-    TDM_UPDATE_ELEMENT_TEXT,
+use windows::{
+    core::{BOOL, PCWSTR},
+    Win32::{
+        Foundation::{FALSE, HMODULE},
+        UI::{
+            Controls::{
+                TaskDialogIndirect, TASKDIALOGCONFIG, TASKDIALOGCONFIG_0, TASKDIALOGCONFIG_1,
+                TASKDIALOG_BUTTON, TASKDIALOG_COMMON_BUTTON_FLAGS, TASKDIALOG_FLAGS, TDE_CONTENT,
+                TDE_EXPANDED_INFORMATION, TDM_NAVIGATE_PAGE,
+                TDM_SET_BUTTON_ELEVATION_REQUIRED_STATE, TDM_UPDATE_ELEMENT_TEXT,
+            },
+            WindowsAndMessaging::SendMessageA,
+        },
+    },
 };
-#[cfg(windows)]
-use winapi::um::libloaderapi::GetModuleHandleA;
-#[cfg(windows)]
-use winapi::um::winnt::LPWSTR;
-#[cfg(windows)]
-use winapi::um::winuser::SendMessageA;
 
 #[cfg(not(windows))]
 pub type HWND = *mut usize;
@@ -37,7 +32,7 @@ pub type HWND = *mut usize;
 type HMODULE = *mut usize;
 
 #[cfg(not(windows))]
-type LPWSTR = *mut u16;
+type PWSTR = *mut u16;
 
 #[cfg(not(windows))]
 type WPARAM = usize;
@@ -48,7 +43,6 @@ type LPARAM = isize;
 #[cfg(not(windows))]
 type HRESULT = i32;
 
-#[cfg(not(windows))]
 type UINT = u32;
 
 #[cfg(not(windows))]
@@ -59,7 +53,6 @@ type TASKDIALOG_FLAGS = u32;
 #[allow(non_camel_case_types)]
 type TASKDIALOG_COMMON_BUTTON_FLAGS = u32;
 
-use std::ptr::null_mut;
 use std::{io::Error, usize};
 
 pub type TaskDialogHyperlinkCallback = Option<fn(context: &str) -> ()>;
@@ -67,7 +60,7 @@ pub type TaskDialogHyperlinkCallback = Option<fn(context: &str) -> ()>;
 pub type TaskDialogWndProcCallback = Option<
     unsafe extern "system" fn(
         hwnd: HWND,
-        msg: UINT,
+        msg: TASKDIALOG_NOTIFICATIONS,
         w_param: WPARAM,
         l_param: LPARAM,
         ref_data: *mut TaskDialogConfig,
@@ -81,6 +74,7 @@ pub enum ExecuteOption {
 
 mod constants;
 pub use constants::*;
+
 pub struct TaskDialogConfig {
     pub parent: HWND,
     pub instance: HMODULE,
@@ -98,8 +92,8 @@ pub struct TaskDialogConfig {
     pub default_button: i32,
     pub radio_buttons: Vec<TaskDialogButton>,
     pub default_radio_buttons: i32,
-    pub main_icon: LPWSTR,
-    pub footer_icon: LPWSTR,
+    pub main_icon: PCWSTR,
+    pub footer_icon: PCWSTR,
     /** When created dialog, the value set to HWND. */
     pub dialog_hwnd: HWND,
     /** When close the dialog, the value set to true, default is false. */
@@ -112,9 +106,9 @@ pub struct TaskDialogConfig {
 impl Default for TaskDialogConfig {
     fn default() -> Self {
         TaskDialogConfig {
-            parent: null_mut(),
-            instance: null_mut(),
-            flags: 0,
+            parent: HWND::default(),
+            instance: HMODULE::default(),
+            flags: TASKDIALOG_FLAGS::default(),
             common_buttons: TDCBF_CANCEL_BUTTON,
             window_title: "".to_string(),
             main_instruction: "".to_string(),
@@ -128,9 +122,9 @@ impl Default for TaskDialogConfig {
             default_button: 0,
             radio_buttons: vec![],
             default_radio_buttons: 0,
-            main_icon: null_mut(),
-            footer_icon: null_mut(),
-            dialog_hwnd: null_mut(),
+            main_icon: PCWSTR::null(),
+            footer_icon: PCWSTR::null(),
+            dialog_hwnd: HWND::default(),
             is_destroyed: false,
             hyperlink_callback: None,
             callback: None,
@@ -141,13 +135,10 @@ impl Default for TaskDialogConfig {
 
 #[cfg(windows)]
 impl TaskDialogConfig {
-    /**
-    Add TDF_SHOW_PROGRESS_BAR flag on marquee is false;
-
-    Add TDF_SHOW_MARQUEE_PROGRESS_BAR flag on marquee is true;
-
-    https://docs.microsoft.com/en-us/windows/win32/controls/progress-bar-control
-    */
+    /// Add `TDF_SHOW_PROGRESS_BAR` flag on `marquee` is `false`,
+    /// otherwise `TDF_SHOW_MARQUEE_PROGRESS_BAR`.
+    ///
+    /// <https://docs.microsoft.com/en-us/windows/win32/controls/progress-bar-control>
     pub fn enable_process_bar(&mut self, marquee: bool) {
         if marquee {
             if self.flags & TDF_SHOW_MARQUEE_PROGRESS_BAR != TDF_SHOW_MARQUEE_PROGRESS_BAR {
@@ -160,7 +151,7 @@ impl TaskDialogConfig {
         }
     }
 
-    /** disables progress bar */
+    /// Disables progresss bar
     pub fn disable_process_bar(&mut self, marquee: bool) {
         if marquee {
             if self.flags & TDF_SHOW_MARQUEE_PROGRESS_BAR == TDF_SHOW_MARQUEE_PROGRESS_BAR {
@@ -173,38 +164,39 @@ impl TaskDialogConfig {
         }
     }
 
-    /** Set status or animation time of marquee progress bar */
+    /// Set status or animation time of marquee progress bar
     pub fn set_process_bar_marquee(&mut self, enable: bool, time: isize) {
-        if self.dialog_hwnd.is_null() {
+        if self.dialog_hwnd.is_invalid() {
             return;
         }
         unsafe {
             SendMessageA(
                 self.dialog_hwnd,
-                TDM_SET_PROGRESS_BAR_MARQUEE,
-                if enable {
-                    TRUE as usize
-                } else {
-                    FALSE as usize
-                },
-                time,
+                TDM_SET_PROGRESS_BAR_MARQUEE.0 as _,
+                WPARAM(if enable { 1 } else { 0 }),
+                LPARAM(time),
             );
         }
     }
 
-    /** Set the percentage of the progress bar */
+    /// Set the percentage of the progress bar
     pub fn set_process_bar(&mut self, percentage: usize) {
-        if self.dialog_hwnd.is_null() {
+        if self.dialog_hwnd.is_invalid() {
             return;
         }
         unsafe {
-            SendMessageA(self.dialog_hwnd, TDM_SET_PROGRESS_BAR_POS, percentage, 0);
+            SendMessageA(
+                self.dialog_hwnd,
+                TDM_SET_PROGRESS_BAR_POS.0 as _,
+                WPARAM(percentage),
+                LPARAM(0),
+            );
         }
     }
 
-    /** Set the content text */
+    /// Set the content text
     pub fn set_content(&mut self, content: &str) {
-        if self.dialog_hwnd.is_null() {
+        if self.dialog_hwnd.is_invalid() {
             return;
         }
         self.content = content.to_string();
@@ -212,50 +204,57 @@ impl TaskDialogConfig {
             let content_wchar = U16CString::from_str_unchecked(content);
             SendMessageA(
                 self.dialog_hwnd,
-                TDM_UPDATE_ELEMENT_TEXT,
-                TDE_CONTENT as _,
-                content_wchar.as_ptr() as _,
+                TDM_UPDATE_ELEMENT_TEXT.0 as _,
+                WPARAM(TDE_CONTENT.0 as _),
+                LPARAM(content_wchar.as_ptr() as _),
             );
         }
     }
 
-    /** Set the main instruction text */
+    /// Set the main instruction text
     pub fn set_main_instruction(&mut self, main_instruction: &str) {
-        if self.dialog_hwnd.is_null() {
+        if self.dialog_hwnd.is_invalid() {
             return;
         }
         self.main_instruction = main_instruction.to_string();
         unsafe {
+            use windows::Win32::UI::Controls::TDE_MAIN_INSTRUCTION;
+
             let main_instruction_wchar = U16CString::from_str_unchecked(main_instruction);
             SendMessageA(
                 self.dialog_hwnd,
-                TDM_UPDATE_ELEMENT_TEXT,
-                TDE_MAIN_INSTRUCTION as _,
-                main_instruction_wchar.as_ptr() as _,
+                TDM_UPDATE_ELEMENT_TEXT.0 as _,
+                WPARAM(TDE_MAIN_INSTRUCTION.0 as _),
+                LPARAM(main_instruction_wchar.as_ptr() as _),
             );
         }
     }
 
-    /** Set the footer text */
+    /// Set the footer text
     pub fn set_footer(&mut self, footer: &str) {
-        if self.dialog_hwnd.is_null() {
+        if self.dialog_hwnd.is_invalid() {
             return;
         }
         self.footer = footer.to_string();
         unsafe {
+            use windows::Win32::UI::{
+                Controls::{TDE_FOOTER, TDM_UPDATE_ELEMENT_TEXT},
+                WindowsAndMessaging::SendMessageA,
+            };
+
             let footer_wchar = U16CString::from_str_unchecked(footer);
             SendMessageA(
                 self.dialog_hwnd,
-                TDM_UPDATE_ELEMENT_TEXT,
-                TDE_FOOTER as _,
-                footer_wchar.as_ptr() as _,
+                TDM_UPDATE_ELEMENT_TEXT.0 as _,
+                WPARAM(TDE_FOOTER.0 as _),
+                LPARAM(footer_wchar.as_ptr() as _),
             );
         }
     }
 
-    /** Set the expanded information text */
+    /// Set the expanded information text
     pub fn set_expanded_information(&mut self, expanded_information: &str) {
-        if self.dialog_hwnd.is_null() {
+        if self.dialog_hwnd.is_invalid() {
             return;
         }
         self.expanded_information = expanded_information.to_string();
@@ -263,31 +262,31 @@ impl TaskDialogConfig {
             let expanded_information_wchar = U16CString::from_str_unchecked(expanded_information);
             SendMessageA(
                 self.dialog_hwnd,
-                TDM_UPDATE_ELEMENT_TEXT,
-                TDE_EXPANDED_INFORMATION as _,
-                expanded_information_wchar.as_ptr() as _,
+                TDM_UPDATE_ELEMENT_TEXT.0 as _,
+                WPARAM(TDE_EXPANDED_INFORMATION.0 as _),
+                LPARAM(expanded_information_wchar.as_ptr() as _),
             );
         }
     }
 
-    /** Set the button elevation state */
+    /// Set the button elevation state
     pub fn set_button_elevation_required_state(&mut self, button_id: usize, enable: bool) {
-        if self.dialog_hwnd.is_null() {
+        if self.dialog_hwnd.is_invalid() {
             return;
         }
         unsafe {
             SendMessageA(
                 self.dialog_hwnd,
-                TDM_SET_BUTTON_ELEVATION_REQUIRED_STATE,
-                button_id,
-                if enable { 1 } else { 0 },
+                TDM_SET_BUTTON_ELEVATION_REQUIRED_STATE.0 as _,
+                WPARAM(button_id),
+                LPARAM(if enable { 1 } else { 0 }),
             );
         }
     }
 
-    /** Navigate to new page */
+    /// Navigate to new page
     pub fn navigate_page(&mut self, conf: &mut TaskDialogConfig) {
-        if self.dialog_hwnd.is_null() {
+        if self.dialog_hwnd.is_invalid() {
             return;
         }
         execute_task_dialog(conf, ExecuteOption::TaskDialogNavigate).ok();
@@ -343,16 +342,19 @@ pub fn execute_task_dialog(
 ) -> Result<TaskDialogResult, Error> {
     use std::ptr::addr_of_mut;
 
-    use winapi::um::commctrl::TDM_NAVIGATE_PAGE;
-
     let mut result = TaskDialogResult::default();
     let conf_ptr: *mut TaskDialogConfig = conf;
     let conf_long_ptr = conf_ptr as isize;
 
     let ret = unsafe {
         // Call GetModuleHandleA on conf.instance is null
-        let instance = if conf.instance.is_null() {
-            GetModuleHandleA(std::ptr::null())
+
+        let instance = if conf.instance.is_invalid() {
+            use windows::Win32::System::LibraryLoader::GetModuleHandleA;
+
+            // Passing NULL handle indicates the self process handle is
+            // no way to fail in Windows
+            GetModuleHandleA(None).unwrap()
         } else {
             conf.instance
         };
@@ -382,7 +384,7 @@ pub fn execute_task_dialog(
             .enumerate()
             .map(|(i, btn)| TASKDIALOG_BUTTON {
                 nButtonID: btn.id,
-                pszButtonText: btn_text[i].as_ptr(),
+                pszButtonText: PCWSTR(btn_text[i].as_ptr()),
             })
             .collect();
 
@@ -398,27 +400,32 @@ pub fn execute_task_dialog(
             .enumerate()
             .map(|(i, btn)| TASKDIALOG_BUTTON {
                 nButtonID: btn.id,
-                pszButtonText: radio_btn_text[i].as_ptr(),
+                pszButtonText: PCWSTR(radio_btn_text[i].as_ptr()),
             })
             .collect();
 
         // ICON
-        let mut u1: TASKDIALOGCONFIG_u1 = Default::default();
-        let mut u2: TASKDIALOGCONFIG_u2 = Default::default();
+        let mut u1: TASKDIALOGCONFIG_0 = Default::default();
+        let mut u2: TASKDIALOGCONFIG_1 = Default::default();
         if !conf.main_icon.is_null() {
-            *u1.pszMainIcon_mut() = conf.main_icon;
+            u1.pszMainIcon = conf.main_icon;
         }
         if !conf.footer_icon.is_null() {
-            *u2.pszFooterIcon_mut() = conf.footer_icon;
+            u2.pszFooterIcon = conf.footer_icon;
         }
 
         unsafe extern "system" fn callback(
             hwnd: HWND,
-            msg: UINT,
+            msg: TASKDIALOG_NOTIFICATIONS,
             _w_param: WPARAM,
             _l_param: LPARAM,
-            lp_ref_data: LONG_PTR,
+            lp_ref_data: isize,
         ) -> HRESULT {
+            use windows::Win32::{
+                Foundation::S_OK,
+                UI::Controls::{TDN_CREATED, TDN_DESTROYED, TDN_HYPERLINK_CLICKED},
+            };
+
             let conf = std::mem::transmute::<isize, *mut TaskDialogConfig>(lp_ref_data);
             match msg {
                 TDN_CREATED => {
@@ -428,7 +435,7 @@ pub fn execute_task_dialog(
                     (*conf).is_destroyed = true;
                 }
                 TDN_HYPERLINK_CLICKED => {
-                    let link = U16CString::from_ptr_str(_l_param as *const u16)
+                    let link = U16CString::from_ptr_str(_l_param.0 as *const u16)
                         .to_string()
                         .unwrap();
                     if let Some(callback) = (*conf).hyperlink_callback {
@@ -440,31 +447,32 @@ pub fn execute_task_dialog(
             if let Some(callback) = (*conf).callback {
                 return callback(hwnd, msg, _w_param, _l_param, lp_ref_data as _);
             }
+
             S_OK
         }
 
         let mut config = TASKDIALOGCONFIG {
             cbSize: std::mem::size_of::<TASKDIALOGCONFIG>() as UINT,
             hwndParent: conf.parent,
-            hInstance: instance,
+            hInstance: instance.into(),
             dwFlags: conf.flags,
             dwCommonButtons: conf.common_buttons,
-            pszWindowTitle: window_title.as_ptr(),
-            pszMainInstruction: main_instruction.as_ptr(),
-            pszContent: content.as_ptr(),
-            pszVerificationText: verification_text.as_ptr(),
-            pszExpandedInformation: expanded_information.as_ptr(),
-            pszExpandedControlText: expanded_control_text.as_ptr(),
-            pszCollapsedControlText: collapsed_control_text.as_ptr(),
-            pszFooter: footer.as_ptr(),
+            pszWindowTitle: PCWSTR::from_raw(window_title.as_ptr()),
+            pszMainInstruction: PCWSTR::from_raw(main_instruction.as_ptr()),
+            pszContent: PCWSTR::from_raw(content.as_ptr()),
+            pszVerificationText: PCWSTR::from_raw(verification_text.as_ptr()),
+            pszExpandedInformation: PCWSTR::from_raw(expanded_information.as_ptr()),
+            pszExpandedControlText: PCWSTR::from_raw(expanded_control_text.as_ptr()),
+            pszCollapsedControlText: PCWSTR::from_raw(collapsed_control_text.as_ptr()),
+            pszFooter: PCWSTR::from_raw(footer.as_ptr()),
             cButtons: buttons.len() as UINT,
             pButtons: buttons.as_slice().as_ptr(),
             nDefaultButton: conf.default_button,
             cRadioButtons: radio_buttons.len() as UINT,
             pRadioButtons: radio_buttons.as_slice().as_ptr(),
             nDefaultRadioButton: conf.default_radio_buttons,
-            u1,
-            u2,
+            Anonymous1: u1,
+            Anonymous2: u2,
             pfCallback: Some(callback),
             lpCallbackData: conf_long_ptr,
             cxWidth: conf.cx_width,
@@ -476,24 +484,28 @@ pub fn execute_task_dialog(
                 let mut verify: BOOL = FALSE;
                 let dialog_result = TaskDialogIndirect(
                     &config,
-                    &mut result.button_id,
-                    &mut result.radio_button_id,
-                    &mut verify,
-                );
-                result.checked = verify != 0;
+                    Some(&mut result.button_id),
+                    Some(&mut result.radio_button_id),
+                    Some(&mut verify),
+                )
+                .map_or_else(|e| e.code().0, |_| 0);
+                result.checked = verify != FALSE;
+
                 dialog_result
             }
             ExecuteOption::TaskDialogNavigate => {
                 SendMessageA(
                     conf.dialog_hwnd,
-                    TDM_NAVIGATE_PAGE,
-                    0,
-                    addr_of_mut!(config) as _,
+                    TDM_NAVIGATE_PAGE.0 as _,
+                    WPARAM(0),
+                    LPARAM(addr_of_mut!(config) as _),
                 );
+
                 0
             }
         }
     };
+
     if ret != 0 {
         Err(Error::last_os_error())
     } else {
@@ -507,7 +519,7 @@ pub fn show_msg_dialog(
     title: &str,
     main_instruction: &str,
     content: &str,
-    icon: LPWSTR,
+    icon: PCWSTR,
 ) -> Option<Error> {
     let mut conf = TaskDialogConfig {
         common_buttons: TDCBF_OK_BUTTON,
