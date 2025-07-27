@@ -18,5 +18,10 @@ rustc-args = ["--cfg", "windows"]
 [dependencies]
 
 [target.'cfg(windows)'.dependencies]
-winapi = { version = "0.3", features = ["impl-default","winnt","commoncontrols","commctrl","libloaderapi"] }
-widestring = "1.0.2"
+windows = { version = "0.61", features = [
+    "Win32_Foundation",
+    "Win32_System_LibraryLoader",
+    "Win32_UI_Controls",
+    "Win32_UI_WindowsAndMessaging",
+] }
+widestring = "1.2"

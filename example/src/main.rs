@@ -10,16 +10,17 @@ fn hyperlink_callback(context: &str) {
 
 unsafe extern "system" fn callback(
     hwnd: HWND,
-    msg: u32,
-    w_param: usize,
-    l_param: isize,
+    msg: TASKDIALOG_NOTIFICATIONS,
+    w_param: WPARAM,
+    l_param: LPARAM,
     ref_data: *mut TaskDialogConfig,
-) -> i32 {
+) -> HRESULT {
     println!(
         "callback: hwnd={:?} msg={} wparam={:#X} lparam={:#X} ref_data={:?}",
-        hwnd, msg, w_param, l_param, ref_data
+        hwnd, msg.0, w_param.0, l_param.0, ref_data
     );
-    0
+
+    S_OK
 }
 
 fn main() {
@@ -161,11 +162,11 @@ fn show_process_bar() {
 fn page_navigation() {
     unsafe extern "system" fn page1_callback(
         _: HWND,
-        msg: u32,
-        w_param: usize,
-        _: isize,
+        msg: TASKDIALOG_NOTIFICATIONS,
+        w_param: WPARAM,
+        _: LPARAM,
         ref_data: *mut TaskDialogConfig,
-    ) -> i32 {
+    ) -> HRESULT {
         if msg == TDN_NAVIGATED {
         } else if msg == TDN_BUTTON_CLICKED {
             // TDN_BUTTON_CLICKED
@@ -173,7 +174,7 @@ fn page_navigation() {
             // Note that lifetime is limited in Rust objects
             // and we cannot make new struct in stack here.
             // Instead we should modify `ref_data`.
-            if w_param as i32 == 1776 {
+            if w_param.0 == 1776 {
                 (*ref_data).window_title = "Page #1".to_owned();
                 (*ref_data).main_instruction = "Page #1".to_owned();
                 (*ref_data).buttons = vec![TaskDialogButton {
@@ -181,8 +182,8 @@ fn page_navigation() {
                     text: "Continue".to_owned(),
                 }];
                 (*ref_data).navigate_page(&mut *ref_data);
-                return 1; // S_FALSE
-            } else if w_param as i32 == 1777 {
+                return S_FALSE;
+            } else if w_param.0 == 1777 {
                 (*ref_data).window_title = "Page #2".to_owned();
                 (*ref_data).main_instruction = "Page #2".to_owned();
                 (*ref_data).buttons = vec![TaskDialogButton {
@@ -190,10 +191,11 @@ fn page_navigation() {
                     text: "Back to page #1".to_owned(),
                 }];
                 (*ref_data).navigate_page(&mut *ref_data);
-                return 1; // S_FALSE
+                return S_FALSE;
             }
         }
-        0
+
+        S_OK
     }
 
     let mut conf = TaskDialogConfig {
