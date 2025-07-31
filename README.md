@@ -5,13 +5,15 @@
 
 Simply call the Win32 API `TaskDialogIndirect` in Rust.
 
-Can be safely call on not windows platforms, but it has no effect.
+> ~~Can be safely call on not windows platforms, but it has no effect.~~
+> 
+> After version 1.0.0, it can no longer run properly on Linux. Please use `cfg(windows)` to mark the usage.
 
 ## Dependencies
 
 ```toml
-[dependencies]
-win-task-dialog = "0.1.7"
+[target.'cfg(windows)'.dependencies]
+win-task-dialog = "1.0.0"
 
 [build-dependencies]
 embed-resource = "2.1"
