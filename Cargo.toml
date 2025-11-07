@@ -18,7 +18,7 @@ rustc-args = ["--cfg", "windows"]
 [dependencies]
 
 [target.'cfg(windows)'.dependencies]
-windows = { version = "0.61", features = [
+windows = { version = "0.62", features = [
     "Win32_Foundation",
     "Win32_System_LibraryLoader",
     "Win32_UI_Controls",
